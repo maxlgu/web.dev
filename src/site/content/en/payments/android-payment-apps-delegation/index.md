@@ -306,12 +306,18 @@ interface IPaymentDetailsUpdateService {
 
 ```kotlin
 private fun bind() {
-    val intent = Intent()
-    intent.setClassName(
-        callingPackageName,
-        "org.chromium.components.payments.PaymentDetailsUpdateService")
-    intent.action = IPaymentDetailsUpdateService::class.java.name
-    isBound = bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    // This action is introduced in Chrome version 92, which adds support to the embeddable
+    // Chrome browsers (e.g., WebLayer).
+    val newIntent = Intent("org.chromium.intent.action.UPDATE_PAYMENT_DETAILS")
+        .setPackage(callingBrowserPackage)
+    if (packageManager.resolveService(newIntent, PackageManager.GET_RESOLVED_FILTER) == null) {  // Fallback.
+        // The fallback approach only works with Chrome.
+        newIntent.setClassName(
+            callingBrowserPackage,
+            "org.chromium.components.payments.PaymentDetailsUpdateService")
+        newIntent.action = IPaymentDetailsUpdateService::class.java.name
+    }
+    isBound = bindService(newIntent, connection, Context.BIND_AUTO_CREATE)
 }
 
 private val connection = object : ServiceConnection {
@@ -372,6 +378,10 @@ request.
         <td>Chromium</td>
         <td>
           <code>"org.chromium.chrome"</code>
+        </td>
+        <td>Google Quick Search Box (a WebLayer embedder)</td>
+        <td>
+          <code>“com.google.android.googlequicksearchbox”</code>
         </td>
       </tr>
     </tbody>
